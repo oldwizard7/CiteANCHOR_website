@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="CiteANCHOR: source-aware grounding for hallucinated citation detection and source resolution, and CiteResolve, a benchmark of 423 real-world hallucinated citations annotated for source recoverability.">
+  <meta name="keywords" content="hallucinated citations, citation verification, source resolution, LLM agents, CiteResolve, CiteANCHOR, CiteAudit">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CiteANCHOR: Source-Aware Grounding for Hallucinated Citations</title>
+  <!-- TODO(links): add citation_arxiv_id and citation_pdf_url once the arXiv version is posted -->
+  <meta name="citation_title" content="CiteANCHOR: Source-Aware Grounding for Hallucinated Citation Detection and Resolution">
+  <meta name="citation_author" content="Chenyi Tong">
+  <meta name="citation_author" content="Ping Nie">
+  <meta name="citation_author" content="Yu Zhang">
+  <meta name="citation_publication_date" content="2026">
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+
+  <style>
+    :root { --ours: #e3f4ec; --band: #eef4fb; --blue: #1a6dd4; --green: #1b7a3a; --ink2: #6b6f75; --red: #b42318; }
+    .paper-table { margin: 0 auto; border-collapse: collapse; font-size: 0.9em; }
+    .paper-table th, .paper-table td { padding: 5px 9px; text-align: center; border: none; }
+    .paper-table td:first-child, .paper-table th:first-child { text-align: left; }
+    .paper-table thead tr:last-child th { border-bottom: 1.5px solid #333; }
+    .paper-table thead tr:first-child th { border-top: 1.5px solid #333; }
+    .paper-table tbody tr:last-child td { border-bottom: 1.5px solid #333; }
+    .paper-table .band td { background: var(--band); font-style: italic; text-align: center; color: #333; }
+    .paper-table .band.ours td { background: var(--ours); }
+    .paper-table tr.ours-row td { background: #f6fbf8; }
+    .paper-table .sep td { border-top: 1px solid #999; }
+    .paper-table .muted { color: var(--ink2); font-size: 0.92em; }
+    .table-wrap { overflow-x: auto; margin: 12px 0 6px; }
+    .caption { font-size: 0.85em; color: #555; margin: 6px auto 0; max-width: 820px; text-align: left; }
+    .finding { background: #fafafa; border-left: 4px solid var(--green); border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
+    .finding b { display: block; margin-bottom: 4px; }
+    .chk-blue { color: var(--blue); font-weight: bold; }
+    .chk-green { color: var(--green); font-weight: bold; }
+    .dash { color: #aaa; }
+    .resource td, .resource th { text-align: left !important; vertical-align: top; }
+    pre code { white-space: pre; }
+    .teaser .container { padding: 0 16px; }
+    @media (max-width: 600px) { .publication-title { font-size: 1.8rem !important; } .section { padding: 2.5rem 16px; } }
+
+    body { overflow-wrap: break-word; }
+    .container, .column { min-width: 0; }
+    .section { padding: 3.25rem 1.5rem; }
+    .project-hero .hero-body { padding: 3.5rem 1.5rem 1.25rem; }
+    .project-hero .publication-title { line-height: 1.2; margin-bottom: 1.25rem; }
+    .project-kicker { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; align-items: center; margin-bottom: 1.1rem; }
+    .project-kicker span { font-weight: 700; background: var(--ours); color: var(--green); border-radius: .4rem; padding: .3rem .7rem; }
+    .project-kicker a, .project-kicker em { font-size: .9rem; font-style: normal; color: var(--ink2); }
+    .publication-links { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; }
+    .publication-links .link-block { margin: 0; }
+    .section-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin-top: 1.2rem; }
+    .section-nav a { padding: .4rem .8rem; border: 1px solid #d8e1e6; border-radius: 999px; font-size: .9rem; }
+    .section-nav a:hover, .section-nav a:focus-visible { background: var(--band); }
+    .overview-figure { padding: 1.5rem 0 2.5rem; }
+    .overview-figure .container { max-width: 1160px !important; }
+    .figure-hint { font-size: .85rem; margin: .6rem 0 1rem; }
+    .table-wrap { max-width: 100%; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
+    .paper-table { min-width: 560px; }
+    .table-wrap:focus-visible, .citation-code:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+    .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; align-items: start; }
+    .two-col .table-wrap { margin-top: 0; }
+    .two-col .paper-table { min-width: 0; width: 100%; }
+    .challenge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.25rem 0 .5rem; }
+    .challenge { background: #fff; border: 1px solid #dde6e3; border-radius: .65rem; padding: 1rem 1.1rem; }
+    .challenge h3 { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; }
+    .challenge p { font-size: .92rem; color: #444; margin: 0; }
+    .repro-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.25rem 0 1.75rem; }
+    .repro-card { background: #fff; border: 1px solid #dde6e3; border-radius: .65rem; padding: 1rem; }
+    .repro-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; }
+    .repro-card p { font-size: .9rem; color: var(--ink2); }
+    .citation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+    .citation-actions p { margin: 0; font-size: .9rem; color: var(--ink2); }
+    .citation-code { max-width: 100%; overflow-x: auto; white-space: pre; }
+    #copy-status { min-height: 1.5em; font-size: .9rem; }
+    .cases-figure { display: block; margin: 0 auto; width: 100%; max-width: 560px; border: 1px solid #e6e6e6; border-radius: 6px; }
+    @media (min-width: 1000px) { .repro-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 700px) {
+      .project-hero .hero-body { padding: 2.5rem 1rem 1rem; }
+      .section { padding: 2.5rem 1rem; }
+      .overview-figure { padding-top: 1rem; }
+      .repro-grid, .two-col, .challenge-grid { grid-template-columns: minmax(0, 1fr); }
+      .publication-authors { font-size: 1rem !important; }
+      .content.has-text-justified { text-align: left !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Title -->
+<section class="hero project-hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <p class="project-kicker"><span>CiteANCHOR</span><em>Preprint · 2026</em></p>
+          <h1 class="title is-2 publication-title">CiteANCHOR: Source-Aware Grounding for<br>Hallucinated Citation Detection and Resolution</h1>
+          <!-- TODO(links): homepage links for Chenyi Tong and Ping Nie -->
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><a href="#">Chenyi Tong</a><sup style="color:#c5050c">1</sup>,</span>
+            <span class="author-block"><a href="#">Ping Nie</a><sup style="color:#b8860b">2</sup>,</span>
+            <span class="author-block"><a href="https://yuzhimanhua.github.io/">Yu Zhang</a><sup style="color:#500000">3</sup></span>
+          </div>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup style="color:#c5050c">1</sup>University of Wisconsin&ndash;Madison,</span>
+            <span class="author-block"><sup style="color:#b8860b">2</sup>University of Waterloo,</span>
+            <span class="author-block"><sup style="color:#500000">3</sup>Texas A&amp;M University</span>
+          </div>
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- TODO(links): put the arXiv PDF at static/CiteANCHOR.pdf, or point this at the arXiv abstract page -->
+              <span class="link-block">
+                <a href="static/CiteANCHOR.pdf" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-file-pdf"></i></span><span>Paper</span>
+                </a>
+              </span>
+              <!-- Code: public repository -->
+              <span class="link-block">
+                <a href="https://github.com/oldwizard7/CiteANCHOR_public" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-github"></i></span><span>Code</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#resources" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-database"></i></span><span>CiteResolve Benchmark</span>
+                </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav class="section-nav" aria-label="On this page">
+        <a href="#overview">Overview</a>
+        <a href="#benchmark">Benchmark</a>
+        <a href="#results">Results</a>
+        <a href="#ablation">Ablation</a>
+        <a href="#cases">Cases</a>
+        <a href="#resources">Code and Data</a>
+        <a href="#citation">Citation</a>
+      </nav>
+    </div>
+  </div>
+</section>
+
+<!-- Figure 1 -->
+<section class="hero teaser overview-figure" id="overview">
+  <div class="container is-max-desktop">
+    <div class="has-text-centered">
+      <a href="static/images/overview.png" target="_blank" rel="noopener" aria-label="Open Figure 1 at full size">
+        <img src="static/images/overview.png" style="width:100%; max-width: 1100px;" alt="Figure 1: overview of CiteANCHOR with a running example">
+      </a>
+      <p class="figure-hint"><a href="static/images/overview.png" target="_blank" rel="noopener">Open Figure 1 at full size</a></p>
+      <p class="caption">Figure 1: Overview of CiteANCHOR with a running example. CiteANCHOR retrieves source-specific evidence, verifies citation fields against the retrieved records, and resolves the underlying source when one work is uniquely supported. Otherwise, it abstains from source resolution.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Abstract -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Abstract</h2>
+    <div class="content has-text-justified">
+      <p>
+        Hallucinated citations make it harder to trace sources and verify the evidence behind scientific claims.
+        Detecting them is difficult because bibliographic records can be incomplete or differ across source types and publication versions.
+        A plausible match alone neither validates the citation nor establishes its underlying source.
+        We introduce <b>CiteResolve</b>, a benchmark of 423 real-world hallucinated citations annotated for source recoverability.
+        We further propose <b>CiteANCHOR</b>, a source-aware grounding framework that adapts retrieval and field-level verification to each source type and separately determines citation validity and whether a unique source can be recovered.
+        On an existing detection benchmark, CiteANCHOR achieves 0.841 F1 with GPT-5.6 Luna and 0.784 with an open-weight backbone, outperforming the baseline with the same backbones by 7.9 and 36.8 points.
+        On CiteResolve, it achieves 74.7% and 70.7% end-to-end task success, outperforming the corresponding web search baselines by 16.3 and 65.3 percentage points.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Benchmark -->
+<section class="section" id="benchmark" style="background-color: #fafafa;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">The CiteResolve Benchmark</h2>
+    <div class="content has-text-justified">
+      <p>
+        Automated reference checks are already used at major conferences, with flagged references passed to human reviewers.
+        For such screening to be useful, a system must explain why a citation is flagged and provide source records that allow reviewers to check its decision.
+        Two challenges arise.
+      </p>
+    </div>
+    <div class="challenge-grid">
+      <div class="challenge">
+        <h3>Interpreting heterogeneous source evidence</h3>
+        <p>Papers, books, and web resources differ in how they can be retrieved and which fields identify them. A valid citation may omit a field present in a database record, while an invalid citation may match a record that omits the erroneous field. Detection needs source-aware interpretation that separates genuine contradictions from missing information and legitimate publication variants.</p>
+      </div>
+      <div class="challenge">
+        <h3>Separating citation errors from source identity</h3>
+        <p>A citation with incorrect authors may still refer to an identifiable paper, whereas one with a fabricated title may have no real source at all. Evidence that establishes an error does not necessarily establish a replacement. A reliable system must decide whether a citation is wrong and, separately, whether its work can be uniquely identified, and abstain when it cannot.</p>
+      </div>
+    </div>
+    <div class="content has-text-justified">
+      <p>
+        CiteResolve makes this distinction measurable. Building on the <code>Fake</code> subset of the CiteAudit real-world test set, we annotate whether each hallucinated citation can be traced to a unique real work (<b>Recoverable</b>, with a verified corrected citation) or not (<b>Unrecoverable</b>, target <code>None</code>).
+        Systems receive <i>only</i> the citation string and must decide whether it is hallucinated and, if so, return a uniquely supported source or <code>None</code>.
+        Predicting <code>Real</code> on this subset always counts as a failure, so missed detections are penalized in the end-to-end score.
+      </p>
+    </div>
+    <div class="two-col">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="CiteResolve source types">
+        <table class="paper-table">
+          <thead><tr><th>Cited as</th><th>Recoverable</th><th>Unrecoverable</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr><td>Paper</td><td>225</td><td>163</td><td>388</td></tr>
+            <tr><td>Book</td><td>3</td><td>1</td><td>4</td></tr>
+            <tr><td>Web resource<sup>&dagger;</sup></td><td>24</td><td>7</td><td>31</td></tr>
+            <tr class="sep"><td><b>Total</b></td><td><b>252</b></td><td><b>171</b></td><td><b>423</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="CiteResolve error patterns">
+        <table class="paper-table">
+          <thead><tr><th>What a recoverable citation gets wrong</th><th>Citations</th></tr></thead>
+          <tbody>
+            <tr><td>Authors only</td><td>185 (73%)</td></tr>
+            <tr><td>Title only</td><td>8 (3%)</td></tr>
+            <tr><td>Title and authors</td><td>33 (13%)</td></tr>
+            <tr><td>Publication details</td><td>15 (6%)</td></tr>
+            <tr><td>Web page details</td><td>11 (4%)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="caption">Table 1: CiteResolve at a glance. <sup>&dagger;</sup>Web pages, datasets, software, and technical reports. Publication details refer to venue, year, volume, pages, or link. Web page details involve the page title, the author or organization, and the address.</p>
+    <div class="has-text-centered" style="margin-top: 22px;">
+      <img src="static/images/citeresolve_donuts.png" style="width:100%; max-width: 980px;" alt="Figure 2: additional statistics of CiteResolve">
+      <p class="caption">Figure 2: Additional statistics of CiteResolve. Left: origin of the gold record for the 252 Recoverable citations. &ldquo;Cited web page&rdquo; denotes cases where the cited webpage itself serves as the gold source; &ldquo;Other&rdquo; groups the remaining record sources. Middle: research areas of all 423 citations. Right: type of source cited by all 423 citations.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Method -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Source-Aware Grounding with CiteANCHOR</h2>
+    <div class="content has-text-justified">
+      <p>
+        CiteANCHOR interprets retrieved records using source-specific criteria for citation verification and source resolution.
+        Its central mechanism is <b>evidence decomposition</b>: individual bibliographic fields are checked before separate decisions are made about citation validity and source identity, so that a matching field does not validate the entire citation and an erroneous field does not automatically rule out its source.
+        A <b>chain-of-source</b> strategy connects three modules that share the retrieved records:
+      </p>
+      <ul>
+        <li><b>Source discovery</b> extracts title, authors, identifiers, venue, and year, determines whether the citation refers to a paper, book, or web resource, and retrieves records from cached and local resources first, then identifiers and structured bibliographic services (Crossref, OpenAlex, arXiv, Semantic Scholar, Europe PMC, Google Books, DataCite), and only then from Google Search and Google Scholar.</li>
+        <li><b>Evidence verification</b> compares each field against the retrieved records with deterministic checks that distinguish contradictions from missing information and legitimate publication variants; an LLM judge handles only the comparisons these checks do not settle.</li>
+        <li><b>Source resolution</b> reuses the collected evidence to recover the underlying work when exactly one record is supported, adds at most one targeted follow-up search when a detected error still has no supported source, and otherwise returns <code>None</code>.</li>
+      </ul>
+      <p>
+        The same retrieval rules and verification thresholds apply to both backbones we evaluate: the proprietary GPT-5.6 Luna and the open-weight OpenResearcher-30B-A3B, which supports local inference for confidential submissions.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Main results -->
+<section class="section" id="results" style="background-color: #fafafa;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Citation Detection on CiteAudit</h2>
+    <div class="content has-text-justified">
+      <p>
+        All methods are compared on the same 3,356 real-world citations (467 hallucinated) of the CiteAudit test set.
+        Published results provide context; the lower blocks compare methods using the same backbone, where CiteAudit is rerun with its released pipeline and prompts.
+      </p>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Detection results table">
+      <table class="paper-table">
+        <thead>
+          <tr><th></th><th colspan="4">Confusion matrix</th><th colspan="4">Metrics</th></tr>
+          <tr><th>Method</th><th>TP</th><th>FN</th><th>FP</th><th>TN</th><th>Acc.</th><th>Prec.</th><th>Rec.</th><th>F1</th></tr>
+        </thead>
+        <tbody>
+          <tr class="band"><td colspan="9">Published results for reference (Shi et al., 2026)</td></tr>
+          <tr><td>GPTZero</td><td>338</td><td>129</td><td>1,358</td><td>1,531</td><td>0.557</td><td>0.199</td><td>0.724</td><td>0.313</td></tr>
+          <tr><td>Gemini-3-Pro</td><td>351</td><td>116</td><td>412</td><td>2,477</td><td>0.843</td><td>0.460</td><td>0.752</td><td>0.571</td></tr>
+          <tr><td>GPT-5.2</td><td>366</td><td>101</td><td>1,379</td><td>1,510</td><td>0.559</td><td>0.210</td><td>0.784</td><td>0.331</td></tr>
+          <tr><td>Claude-Sonnet-4.5</td><td>349</td><td>118</td><td>756</td><td>2,133</td><td>0.740</td><td>0.316</td><td>0.747</td><td>0.444</td></tr>
+          <tr><td>CiteAudit (Gemini-3-Flash)</td><td>444</td><td>23</td><td>149</td><td>2,740</td><td>0.949</td><td>0.749</td><td>0.951</td><td>0.838</td></tr>
+          <tr class="band"><td colspan="9">Backbone: GPT-5.6 Luna</td></tr>
+          <tr><td>Direct Prompting</td><td>120</td><td>347</td><td>54</td><td>2,835</td><td>0.881</td><td>0.690</td><td>0.257</td><td>0.374</td></tr>
+          <tr><td>CiteAudit</td><td>361</td><td>106</td><td>120</td><td>2,769</td><td>0.933</td><td>0.751</td><td>0.773</td><td>0.762</td></tr>
+          <tr class="ours-row"><td><b>CiteANCHOR</b></td><td>378</td><td>89</td><td>54</td><td>2,835</td><td><b>0.957</b></td><td><b>0.875</b></td><td><b>0.809</b></td><td><b>0.841</b></td></tr>
+          <tr class="band"><td colspan="9">Backbone: OpenResearcher-30B-A3B</td></tr>
+          <tr><td>Direct Prompting</td><td>100</td><td>367</td><td>497</td><td>2,392</td><td>0.743</td><td>0.168</td><td>0.214</td><td>0.188</td></tr>
+          <tr><td>CiteAudit</td><td>222</td><td>245</td><td>379</td><td>2,510</td><td>0.814</td><td>0.369</td><td>0.475</td><td>0.416</td></tr>
+          <tr class="ours-row"><td><b>CiteANCHOR</b></td><td>384</td><td>83</td><td>128</td><td>2,761</td><td><b>0.937</b></td><td><b>0.750</b></td><td><b>0.822</b></td><td><b>0.784</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">Table 2: Detection on the CiteAudit real-world test set, with <code>Fake</code> as the positive class. Published results are taken from Shi et al. (2026) and not rerun; CiteAudit's published result uses Gemini-3-Flash. Bold marks the best metric within each backbone block.</p>
+    <div class="content" style="margin-top: 18px;">
+      <div class="finding"><b>Source-aware grounding improves both precision and recall over CiteAudit with the same backbone.</b>
+        With GPT-5.6 Luna, F1 rises from 0.762 to 0.841 (+7.9), with precision 0.875 vs. 0.751 and recall 0.809 vs. 0.773.</div>
+      <div class="finding"><b>The gain is largest with the open-weight backbone.</b>
+        With OpenResearcher-30B-A3B, F1 rises from 0.416 to 0.784: false positives fall from 379 to 128 and missed hallucinated citations from 245 to 83. Deterministic field checks leave the backbone a narrow role, so the result depends less on which model fills it.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Resolution -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Source Resolution on CiteResolve</h2>
+    <div class="content has-text-justified">
+      <p>
+        Under the end-to-end protocol, a system succeeds on a citation only if it flags it as hallucinated <i>and</i> returns the correct source (Recoverable) or <code>None</code> (Unrecoverable).
+        <b>Identified</b> is the fraction of recoverable citations flagged with a proposed source, or of unrecoverable citations flagged with <code>None</code>; <b>Recovered</b> is the fraction of proposed sources that match the gold record on title, authors, venue, and year; <b>Task success</b> covers all 423 citations.
+      </p>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Source resolution results table">
+      <table class="paper-table">
+        <thead>
+          <tr><th></th><th colspan="2">Recoverable (252)</th><th>Unrecoverable (171)</th><th>Overall</th></tr>
+          <tr><th>Method</th><th>Identified &uarr;</th><th>Recovered &uarr;</th><th>Identified &uarr;</th><th>Task success &uarr;</th></tr>
+        </thead>
+        <tbody>
+          <tr class="band"><td colspan="5">Backbone: GPT-5.6 Luna</td></tr>
+          <tr><td>Direct Prompting</td><td>23.0</td><td>36.2</td><td>19.3</td><td>12.8</td></tr>
+          <tr><td>Web Search</td><td><b>85.3</b></td><td>90.2</td><td>31.0</td><td>58.4</td></tr>
+          <tr class="ours-row"><td><b>CiteANCHOR</b></td><td>65.9</td><td><b>95.2</b></td><td><b>92.4</b></td><td><b>74.7</b></td></tr>
+          <tr class="band"><td colspan="5">Backbone: OpenResearcher-30B-A3B</td></tr>
+          <tr><td>Direct Prompting</td><td>25.8</td><td>12.3</td><td>3.5</td><td>3.3</td></tr>
+          <tr><td>Web Search</td><td>61.9</td><td>10.9</td><td>3.5</td><td>5.4</td></tr>
+          <tr class="ours-row"><td><b>CiteANCHOR</b></td><td><b>68.7</b></td><td><b>87.9</b></td><td><b>86.0</b></td><td><b>70.7</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">Table 3: Source resolution on CiteResolve under the end-to-end protocol. All values are percentages. Web Search uses the same prompt as Direct Prompting but may search the web (OpenAI's web-search tool for GPT-5.6 Luna; OpenResearcher's browser tools for the open-weight backbone). Bold marks the best value within each backbone block.</p>
+    <div class="content" style="margin-top: 18px;">
+      <div class="finding"><b>Web Search proposes more sources; CiteANCHOR proposes the right ones and knows when to stop.</b>
+        With GPT-5.6 Luna, Web Search names a source for 85.3% of recoverable citations against 65.9% for CiteANCHOR, but CiteANCHOR's proposals are more accurate (95.2% vs. 90.2%) and it correctly withholds a correction on 92.4% of unrecoverable citations against 31.0%. The result is 74.7% task success, 16.3 points above Web Search.</div>
+      <div class="finding"><b>Web access alone does not make an open-weight backbone a reliable resolver.</b>
+        With OpenResearcher-30B-A3B, CiteANCHOR is best on all four metrics and reaches 70.7% task success, against 5.4% for Web Search and 3.3% for Direct Prompting: the baseline tends to copy the cited title and author list back as the answer, while CiteANCHOR reads authors and source from the retrieved records.</div>
+    </div>
+    <div class="has-text-centered" style="margin-top: 26px;">
+      <img src="static/images/cost_searches.png" style="width:100%; max-width: 440px;" alt="Figure 3: commercial search use and estimated API cost">
+      <p class="caption">Figure 3: Commercial search use and estimated API cost over the 3,356 CiteAudit citations. (a) Number of SerpApi searches, including additional searches during source resolution: 3,204 &rarr; 1,039 with GPT-5.6 Luna and 4,071 &rarr; 1,066 with OpenResearcher-30B-A3B. (b) Estimated combined cost of LLM calls and SerpApi searches at public API prices; hatching marks the search share. With GPT-5.6 Luna the estimated cost per run falls from about $36 to $12.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Ablation -->
+<section class="section" id="ablation" style="background-color: #fafafa;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Ablation Study</h2>
+    <div class="content has-text-justified">
+      <p>
+        With GPT-5.6 Luna, we examine three design choices: evidence decomposition, complementary retrieval sources, and source-type adaptation.
+        Each variant is evaluated on detection (CiteAudit F1) and on end-to-end resolution (CiteResolve task success).
+      </p>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Ablation table">
+      <table class="paper-table" style="min-width: 0;">
+        <thead>
+          <tr><th>Variant</th><th>CiteAudit F1</th><th>CiteResolve success (%)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>w/o Chain <span class="muted">(one LLM judgment over the same records)</span></td><td>0.643</td><td>59.3</td></tr>
+          <tr class="sep"><td>w/o Search Engines <span class="muted">(no Google and Google Scholar)</span></td><td>0.734</td><td>72.6</td></tr>
+          <tr><td>w/o Structured APIs <span class="muted">(search engines and cited webpages only)</span></td><td>0.773</td><td>53.2</td></tr>
+          <tr class="sep"><td>w/o Type Adaptation <span class="muted">(generic rules for all source types)</span></td><td>0.761</td><td>66.9</td></tr>
+          <tr class="sep ours-row"><td><b>CiteANCHOR</b></td><td><b>0.841</b></td><td><b>74.7</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">Table 4: Ablations with GPT-5.6 Luna. w/o Chain replaces staged verification and resolution with one LLM judgment over the same retrieved records. w/o Search Engines disables Google and Google Scholar searches. w/o Structured APIs removes bibliographic APIs while retaining search engines and cited webpages. w/o Type Adaptation uses generic retrieval and verification rules for all source types.</p>
+    <div class="content" style="margin-top: 18px;">
+      <div class="finding"><b>Evidence decomposition matters even with the retrieved evidence held fixed.</b>
+        Replacing the staged procedure with a single judgment over the same records lowers detection F1 by 19.8 points and resolution success by 15.4 points: a single judgment answers more often and is wrong more often, especially on unrecoverable citations.</div>
+      <div class="finding"><b>Search engines and structured bibliographic records play complementary roles.</b>
+        Removing search engines mainly hurts detection (F1 0.841 &rarr; 0.734), while removing structured APIs mainly hurts resolution (success 74.7 &rarr; 53.2).</div>
+      <div class="finding"><b>Source-type adaptation avoids losses on every kind of work.</b>
+        Generic rules reduce F1 by 8.0 points and success by 7.8 points; they flag far more real books and web resources, while paper-specific rules applied to everything would flag real web resources instead.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Cases -->
+<section class="section" id="cases">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Case Studies</h2>
+    <div class="content has-text-justified">
+      <p>
+        Verification must consider both what a retrieved record says and whether it describes the cited work itself.
+      </p>
+    </div>
+    <img class="cases-figure" src="static/images/cases.png" alt="Figure 4: two CiteResolve cases where all baselines fail">
+    <p class="caption">Figure 4: Two CiteResolve cases where CiteAudit, Web Search, and Direct Prompting fail with GPT-5.6 Luna. Red text marks incorrect citation fields, and red boxes show excerpts from the baselines' explanations. (a) A real title is paired with an incorrect author list: seven of the ten cited authors are absent from the paper's complete 13-author list, yet all three baselines accept the citation. CiteANCHOR detects the contradiction and recovers the source. (b) An unrecoverable citation is repeated on the web without a supporting bibliographic record, and its arXiv identifier resolves to a different paper. CiteANCHOR rejects the mismatched identifier and returns <code>None</code>.</p>
+  </div>
+</section>
+
+<!-- Resources -->
+<section class="section" id="resources" style="background-color: #fafafa;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Code and Data</h2>
+    <div class="repro-grid">
+      <div class="repro-card">
+        <h3><a href="https://github.com/oldwizard7/CiteANCHOR_public">CiteANCHOR code</a></h3>
+        <p>The framework, the run script, and the scorers for detection and source resolution.</p>
+      </div>
+      <div class="repro-card">
+        <h3>CiteResolve benchmark</h3>
+        <p>423 hallucinated citations with recoverability labels and verified corrected citations. Released with the arXiv version.</p>
+      </div>
+      <div class="repro-card">
+        <h3>Open-weight backbone</h3>
+        <p>Adapter for running CiteANCHOR on a local OpenResearcher-30B-A3B server, included in the code repository.</p>
+      </div>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Code and data resources">
+      <table class="paper-table resource">
+        <thead><tr><th>Resource</th><th>Content</th><th>License</th></tr></thead>
+        <tbody>
+          <!-- TODO(links): fill in the data link once CiteResolve is released -->
+          <tr><td><a href="https://github.com/oldwizard7/CiteANCHOR_public">CiteANCHOR</a></td><td>source discovery, evidence verification and source resolution modules; scripts that run the pipeline and compute the paper's numbers</td><td>MIT</td></tr>
+          <tr><td>CiteResolve</td><td>recoverability labels and corrected citations for the 423 benchmark citations</td><td>to be announced</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- BibTeX -->
+<section class="section" id="citation">
+  <span id="BibTeX"></span>
+  <div class="container is-max-desktop content">
+    <h2 class="title has-text-centered">BibTeX</h2>
+    <div class="citation-actions">
+      <button type="button" class="button is-dark" id="copy-bibtex" aria-describedby="copy-status">Copy BibTeX</button>
+      <p>Preprint · 2026</p>
+    </div>
+    <!-- TODO(bibtex): fill in the arXiv id and url once posted -->
+    <pre class="citation-code" tabindex="0" aria-label="BibTeX citation"><code id="bibtex-text">@misc{tong2026citeanchor,
+      title={CiteANCHOR: Source-Aware Grounding for Hallucinated Citation Detection and Resolution},
+      author={Chenyi Tong and Ping Nie and Yu Zhang},
+      year={2026},
+      eprint={XXXX.XXXXX},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/XXXX.XXXXX},
+}
+</code></pre>
+    <p id="copy-status" role="status" aria-live="polite" aria-atomic="true"></p>
+  </div>
+</section>
+
+<!-- Organizations -->
+<section>
+  <div class="section" id="org-banners" style="display:flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 36px;">
+    <a href="https://www.wisc.edu/" target="_blank" rel="external">
+      <img class="org-banner" src="static/images/uw_madison.png" alt="University of Wisconsin–Madison" style="height: 54px; margin: 0;">
+    </a>
+    <a href="https://uwaterloo.ca/" target="_blank" rel="external">
+      <img class="org-banner" src="static/images/waterloo.png" alt="University of Waterloo" style="height: 72px; margin: 0;">
+    </a>
+    <a href="https://www.tamu.edu/" target="_blank" rel="external">
+      <img class="org-banner" src="static/images/tamu.svg" alt="Texas A&amp;M University" style="height: 90px; margin: 0;">
+    </a>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="columns is-centered">
+    <div class="column is-8">
+      <div class="content has-text-centered">
+        <p>
+          This website is adapted from <a href="https://nerfies.github.io/">Nerfies</a>, licensed under a
+          <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script id="bibtex-copy-script">
+  const copyButton = document.getElementById('copy-bibtex');
+  const copyStatus = document.getElementById('copy-status');
+  copyButton.addEventListener('click', async () => {
+    copyButton.disabled = true;
+    copyStatus.textContent = '';
+    try {
+      if (!window.isSecureContext || !navigator.clipboard || !navigator.clipboard.writeText) {
+        throw new Error('Clipboard unavailable');
+      }
+      await navigator.clipboard.writeText(document.getElementById('bibtex-text').textContent);
+      copyStatus.textContent = 'BibTeX copied.';
+    } catch {
+      copyStatus.textContent = 'Copy unavailable. Select the BibTeX below and copy it manually.';
+    } finally {
+      copyButton.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
